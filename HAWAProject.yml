@@ -1,0 +1,243 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+#Creating the VPC 
+  HAWAVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+#Creating Internet Gateway
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    
+#Creating NAT Gateway
+  NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      
+#Creating Elastic IP
+  ElasticIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+
+#Attaching the IGW to the VPC
+  InternetGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      InternetGatewayId: !Ref InternetGateway
+
+#Creaating Public Subnet 1 
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      AvailabilityZone: 'us-east-2a'
+      CidrBlock: '10.0.1.0/24'
+      MapPublicIpOnLaunch: true
+
+#Creating Public Subnet 2 
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      AvailabilityZone: 'us-east-2b'
+      CidrBlock: '10.0.2.0/24'
+      MapPublicIpOnLaunch: true
+
+#Creating Private Subnet 1
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      AvailabilityZone: 'us-east-2a'
+      CidrBlock: '10.0.3.0/24'
+      MapPublicIpOnLaunch: false
+      
+#Creating Private Subnet 2
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      AvailabilityZone: 'us-east-2b'
+      CidrBlock: '10.0.4.0/24'
+      MapPublicIpOnLaunch: false
+
+#Creating a Public Route Table
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref HAWAVPC
+
+#Configuring Public Route
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      
+#Creating a Private Route Table
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref HAWAVPC
+      
+#Creating a Route to NAT Gateway
+  PrivateRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+#Associating Public Subnet 1 and Route Table
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+#Associating Public Subnet 2 and Route Table
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+      
+#Associating Private Subnet 1 and Route Table
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+      
+#Associating Private Subnet 2 and Route Table
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+#Creating Security Group for Instance in Private Subnet
+  InstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: HAWAProjectInstanceSG
+      GroupDescription: Enable HTTP access from ALB
+      VpcId: !Ref HAWAVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '10.0.1.0/24'
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '10.0.2.0/24'
+
+#Creating Security Group for ALB
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: HAWAProjectALBSG
+      GroupDescription: Enable HTTP 
+      VpcId: !Ref HAWAVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0 
+
+#Configuring launch template
+  LaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateName: HAWAHAWACHANG
+      LaunchTemplateData:
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            DeleteOnTermination: true
+            Groups:
+              - !Ref InstanceSecurityGroup
+        ImageId: ami-041b2b1d371dc0fca #My own AMI
+        InstanceType: t2.small
+        KeyName: keyPairForProject4
+        BlockDeviceMappings: 
+          - Ebs:
+              VolumeSize: 10
+              VolumeType: gp2
+              DeleteOnTermination: true
+              Encrypted: true
+            DeviceName: /dev/sdf
+        UserData:
+          'Fn::Base64': !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install httpd -y
+            echo "<h1>Hello World from $(hostname -f)</h1>" > /var/www/html/index.html
+            systemctl start httpd
+            systemctl enable httpd
+
+#Create an Auto Scaling Group
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MaxSize: '4'
+      MinSize: '2'
+      DesiredCapacity: '2'
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+#Creating an Application Load Balancer
+  MyApplicationLoadBalancer : 
+    Type : 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties :
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+      Subnets : 
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Scheme: internet-facing
+
+#Configuring Application Load Balancer Target Group 
+  ALBTargetGroup : 
+    Type : 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties : 
+      HealthCheckPath: '/'
+      HealthCheckIntervalSeconds : '30'
+      HealthCheckTimeoutSeconds : '5'
+      Port : '80'
+      Protocol : HTTP
+      VpcId: !Ref HAWAVPC
+                     
+#Scaling Policy
+  ScalingPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      ScalingAdjustment: '1'
+
+#Creating my listener for ELB
+  MyListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref MyApplicationLoadBalancer
+      Port: '80'
+      Protocol: HTTP

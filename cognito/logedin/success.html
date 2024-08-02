@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat entama</title>
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+  <div id="app">
+    <div id="chat-container">
+      <div id="chat-header">
+        <h2>AI Chat entama</h2>
+        <button id="reset-button">
+        　<img src="reset-icon.png" alt="Reset" title="Reset Chat">
+        </button>
+      </div>
+      <div id="chat-body"></div>
+      <div id="chat-footer">
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button id="send-button">Send</button>
+        <div id="loadingAnimation" style="display:none;">
+        　<div class="loader"></div>
+        　<span>entama is thinking...</span>
+        </div>
+    　</div>
+    </div>
+    <button id="logoutButton">Logout</button>
+  </div>
+  <script src="success.js"></script>
+  <script>
+        const logoutButton = document.getElementById('logoutButton');
+
+        logoutButton.addEventListener('click', () => {
+            // Cookieからトークンを削除
+            document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            // index.htmlに戻る
+            window.location.href = '../index.html';
+        });
+    </script>
+</body>
+</html>

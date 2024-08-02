@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Form</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="session.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <label for="inid">Id:</label>
+            <input type="inid" id="inid" name="inid" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Login</button>
+        </form>
+        <div id="signupbtn">
+            <button onclick="location.href='./signup/index.html'">Sign Up</button>
+        </div>
+        <form id="keycloakform" name="loginWithIdentityProvider" action="https://myfirstuserlogin.auth.us-east-1.amazoncognito.com/login/oidc?client_id=6j0hnhklmeaiuihphilj1enf93&response_type=token&scope=email+openid+phone&redirect_uri=https%3A%2F%2Fd1kel5fgfz1s70.cloudfront.net%2Fserverless3Tier-login%2Fcognito%2Flogedin%2Fsaml.html" method="post">
+            <input type="hidden" name="_csrf" value="60e5b796-fe2c-43a3-b964-1f478f9b7129">
+            <label>Sign in with your corporate ID</label>
+            <input type="button" id="keycloakbtn" onclick="window.location.href='https://myfirstuserlogin.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=keycloak&redirect_uri=https://d1kel5fgfz1s70.cloudfront.net/serverless3Tier-login/cognito/logedin/saml.html&response_type=TOKEN&client_id=6j0hnhklmeaiuihphilj1enf93&scope=email openid phone'" value="keycloak" class="btn btn-info idpButton-customizable" aria-label="keycloak">
+        </form>
+    </div>
+    <script src="login.js"></script>
+</body>
+</html>
